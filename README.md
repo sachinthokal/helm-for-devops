@@ -31,7 +31,7 @@ You can consume charts from this repository directly on any Kubernetes cluster g
 ### 1. Add the Helm Repository
 
 ```bash
-helm repo add sachin-helm-repo https://sachinthokal.github.io/Helm_For_Devops
+helm repo add sachin-helm-repo https://sachinthokal.github.io/helm-for-devops
 
 ```
 
@@ -109,7 +109,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: '[https://sachinthokal.github.io/Helm_For_Devops/](https://sachinthokal.github.io/Helm_For_Devops/)'
+    repoURL: '[https://sachinthokal.github.io/helm-for-devops/](https://sachinthokal.github.io/helm-for-devops/)'
     chart: spring-boot-helm-chart
     targetRevision: '*' # Automatically evaluates and deploys the latest version updated in index.yaml
   destination:
