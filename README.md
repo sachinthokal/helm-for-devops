@@ -101,24 +101,25 @@ This repository serves as a dynamic helm source endpoint for GitOps agents. To m
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: spring-boot-app
-  namespace: argocd
-  labels:
-    app.kubernetes.io/name: spring-boot-app
-    app.kubernetes.io/part-of: argocd
+  name: kube-traffic-lens-app
 spec:
-  project: default
-  source:
-    repoURL: '[https://sachinthokal.github.io/helm-for-devops/](https://sachinthokal.github.io/helm-for-devops/)'
-    chart: spring-boot-helm-chart
-    targetRevision: '*' # Automatically evaluates and deploys the latest version updated in index.yaml
   destination:
-    server: '[https://kubernetes.default.svc](https://kubernetes.default.svc)'
+    name: ''
     namespace: default
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: ''
+    repoURL: 'https://sachinthokal.github.io/helm-for-devops/'
+    targetRevision: '*'
+    chart: kube-traffic-lens
+  sources: []
+  project: default
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 
 ```
 
