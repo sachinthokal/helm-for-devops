@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "kube-traffic-lens-app.fullname" . }}
+  name: {{ include "kube-traffic-lens.fullname" . }}
   labels:
-    {{- include "kube-traffic-lens-app.labels" . | nindent 4 }}
+    {{- include "kube-traffic-lens.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -35,7 +35,7 @@ spec:
             {{- end }}
             backend:
               service:
-                name: {{ include "kube-traffic-lens-app.fullname" $ }}
+                name: {{ include "kube-traffic-lens.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
