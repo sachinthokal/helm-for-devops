@@ -3,7 +3,7 @@ entries:
   helloworld:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-10-02T19:17:06.420891476+05:30"
+    created: "2026-10-02T19:34:23.963521239+05:30"
     description: A Helm chart for Kubernetes
     digest: 42c89b70a0579100e647ca9fe17344ff5565371d984bd7e7d6a9024d321a46c3
     name: helloworld
@@ -14,7 +14,17 @@ entries:
   kube-traffic-lens:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-10-02T19:17:06.421490576+05:30"
+    created: "2026-10-02T19:34:23.964793239+05:30"
+    description: A Helm chart for kube-traffic-lens Application
+    digest: 60ef9c7aecce5ee5cacb39d6f32a7e534a48a664bd7131d635640e6da285725a
+    name: kube-traffic-lens
+    type: application
+    urls:
+    - https://sachinthokal.github.io/helm-for-devops/kube-traffic-lens-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-10-02T19:34:23.964119739+05:30"
     description: A Helm chart for kube-traffic-lens Application
     digest: a784557b708046ef4a4628784718ecfe11cdf4a097ec772496087fbe9949a00e
     name: kube-traffic-lens
@@ -25,7 +35,7 @@ entries:
   spring-boot-helm-chart:
   - apiVersion: v2
     appVersion: 1.0.3
-    created: "2026-10-02T19:17:06.423703276+05:30"
+    created: "2026-10-02T19:34:23.966492639+05:30"
     description: A Helm chart for Kubernetes to deploy a Spring Boot application
     digest: 55fd1772b0aaae2f2c813af78408e710e7cbd1a2c174a2a224a0c6508db80c0d
     name: spring-boot-helm-chart
@@ -35,7 +45,7 @@ entries:
     version: 1.0.4
   - apiVersion: v2
     appVersion: 1.0.2
-    created: "2026-10-02T19:17:06.423054076+05:30"
+    created: "2026-10-02T19:34:23.966048039+05:30"
     description: A Helm chart for Kubernetes to deploy a Spring Boot application
     digest: 838f037495f0d323b9c515e00c927a2a26687777b49046a7946b11457fc7cf56
     name: spring-boot-helm-chart
@@ -45,7 +55,7 @@ entries:
     version: 1.0.3
   - apiVersion: v2
     appVersion: 1.0.1
-    created: "2026-10-02T19:17:06.422603776+05:30"
+    created: "2026-10-02T19:34:23.965632939+05:30"
     description: A Helm chart for Kubernetes to deploy a Spring Boot application
     digest: 2984a47fb297aee3b1b7793acee425869cff0d1068bc817ad13c5147ddbbf074
     name: spring-boot-helm-chart
@@ -55,7 +65,7 @@ entries:
     version: 1.0.2
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-10-02T19:17:06.422126976+05:30"
+    created: "2026-10-02T19:34:23.965270539+05:30"
     description: A Helm chart for Kubernetes to deploy a Spring Boot application
     digest: 99bd8684866046717f982acf18a117206e2b8b761804d8463f9d0552506008ac
     name: spring-boot-helm-chart
@@ -63,4 +73,4 @@ entries:
     urls:
     - https://sachinthokal.github.io/helm-for-devops/spring-boot-helm-chart-1.0.1.tgz
     version: 1.0.1
-generated: "2026-10-02T19:17:06.419624776+05:30"
+generated: "2026-10-02T19:34:23.962732139+05:30"
