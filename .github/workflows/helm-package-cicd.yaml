@@ -1,0 +1,330 @@
+name: HELM PACKAGES CICD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "charts/**"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+
+  helm-repository:
+    name: Validate, Package & Publish Helm Charts
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ==========================================================
+      # 1. Checkout
+      # ==========================================================
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      # ==========================================================
+      # 2. Setup Helm
+      # ==========================================================
+      - name: Setup Helm
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
+
+      # ==========================================================
+      # 3. Verify Tools
+      # ==========================================================
+      - name: Verify Tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Helm version:"
+          helm version
+
+          echo ""
+          echo "YQ version:"
+          yq --version
+
+      # ==========================================================
+      # 4. Detect Charts
+      # ==========================================================
+      - name: Detect Helm Charts
+        id: charts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Detecting Helm charts..."
+
+          CHARTS=()
+
+          while IFS= read -r chart_file; do
+
+            CHART_DIR=$(dirname "$chart_file")
+
+            CHART_NAME=$(yq -r '.name // ""' "$chart_file")
+            CHART_VERSION=$(yq -r '.version // ""' "$chart_file")
+            APP_VERSION=$(yq -r '.appVersion // ""' "$chart_file")
+
+            if [[ -z "$CHART_NAME" ]]; then
+              echo "ERROR: Chart name is missing in ${chart_file}"
+              exit 1
+            fi
+
+            if [[ -z "$CHART_VERSION" ]]; then
+              echo "ERROR: Chart version is missing in ${chart_file}"
+              exit 1
+            fi
+
+            if [[ -z "$APP_VERSION" ]]; then
+              echo "WARNING: appVersion is missing in ${chart_file}"
+            fi
+
+            echo ""
+            echo "----------------------------------------"
+            echo "Chart       : ${CHART_NAME}"
+            echo "Chart Dir   : ${CHART_DIR}"
+            echo "Chart Ver   : ${CHART_VERSION}"
+            echo "App Version : ${APP_VERSION}"
+            echo "----------------------------------------"
+
+            CHARTS+=("${CHART_DIR}")
+
+          done < <(
+            find charts \
+              -mindepth 2 \
+              -maxdepth 2 \
+              -type f \
+              -name "Chart.yaml" \
+              | sort
+          )
+
+          if [[ "${#CHARTS[@]}" -eq 0 ]]; then
+            echo "ERROR: No Helm charts found."
+            exit 1
+          fi
+
+          printf '%s\n' "${CHARTS[@]}" > /tmp/charts.txt
+
+          echo ""
+          echo "Detected charts:"
+          cat /tmp/charts.txt
+
+      # ==========================================================
+      # 5. Helm Lint
+      # ==========================================================
+      - name: Helm Lint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Running Helm lint..."
+
+          while IFS= read -r chart; do
+
+            echo ""
+            echo "Linting: ${chart}"
+
+            helm lint "${chart}"
+
+          done < /tmp/charts.txt
+
+      # ==========================================================
+      # 6. Helm Template Validation
+      # ==========================================================
+      - name: Helm Template Validation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Validating Helm templates..."
+
+          while IFS= read -r chart; do
+
+            CHART_NAME=$(yq -r '.name' "${chart}/Chart.yaml")
+
+            echo ""
+            echo "Rendering: ${CHART_NAME}"
+
+            helm template \
+              "${CHART_NAME}" \
+              "${chart}" \
+              > /dev/null
+
+          done < /tmp/charts.txt
+
+      # ==========================================================
+      # 7. Package Helm Charts
+      # ==========================================================
+      - name: Package Helm Charts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p docs
+
+          while IFS= read -r chart; do
+
+            CHART_NAME=$(yq -r '.name' "${chart}/Chart.yaml")
+            CHART_VERSION=$(yq -r '.version' "${chart}/Chart.yaml")
+
+            echo ""
+            echo "Packaging:"
+            echo "  Chart   : ${CHART_NAME}"
+            echo "  Version : ${CHART_VERSION}"
+
+            helm package \
+              "${chart}" \
+              --destination docs
+
+          done < /tmp/charts.txt
+
+          echo ""
+          echo "Generated Helm packages:"
+          ls -lh docs/*.tgz
+
+      # ==========================================================
+      # 8. Update Helm Repository Index
+      # ==========================================================
+      - name: Update Helm Repository Index
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Updating Helm repository index..."
+
+          REPOSITORY_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          if [[ -f docs/index.yaml ]]; then
+
+            echo "Existing index.yaml found."
+            echo "Merging existing repository index..."
+
+            helm repo index docs \
+              --url "${REPOSITORY_URL}" \
+              --merge docs/index.yaml
+
+          else
+
+            echo "No existing index.yaml found."
+            echo "Creating new repository index..."
+
+            helm repo index docs \
+              --url "${REPOSITORY_URL}"
+
+          fi
+
+          echo ""
+          echo "Updated index.yaml:"
+          cat docs/index.yaml
+
+      # ==========================================================
+      # 9. Show Changes
+      # ==========================================================
+      - name: Show Repository Changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Git status:"
+          git status --short
+
+          echo ""
+          echo "Generated Helm packages:"
+          ls -lh docs/*.tgz || true
+
+          echo ""
+          echo "Repository index:"
+          ls -lh docs/index.yaml
+
+      # ==========================================================
+      # 10. Commit & Push
+      # ==========================================================
+      - name: Commit and Push
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add docs/
+
+          if git diff --cached --quiet; then
+            echo "No Helm repository changes detected."
+            exit 0
+          fi
+
+          git commit \
+            -m "chore: publish helm charts"
+
+          git push
+          
+      # ==========================================================
+      # 11. Publish GitHub Actions Summary
+      # ==========================================================
+      - name: Publish Helm Repository Summary
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          echo "## 🚀 Helm Repository CI/CD Summary" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Details | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Repository | \`${{ github.repository }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Helm Repository | [Open Repository](${REPOSITORY_URL}) |" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📦 Detected Helm Charts" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "| Chart Directory | Chart | Version | App Version |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS= read -r chart; do
+
+            CHART_NAME=$(yq -r '.name' "${chart}/Chart.yaml")
+            CHART_VERSION=$(yq -r '.version' "${chart}/Chart.yaml")
+            APP_VERSION=$(yq -r '.appVersion // "N/A"' "${chart}/Chart.yaml")
+
+            echo "| \`${chart}\` | \`${CHART_NAME}\` | \`${CHART_VERSION}\` | \`${APP_VERSION}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+          done < /tmp/charts.txt
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📦 Generated Helm Packages" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "| Package | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|" >> "$GITHUB_STEP_SUMMARY"
+
+          for package in docs/*.tgz; do
+
+            PACKAGE_NAME=$(basename "$package")
+            PACKAGE_SIZE=$(du -h "$package" | cut -f1)
+
+            echo "| \`${PACKAGE_NAME}\` | ${PACKAGE_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### ✅ Pipeline Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Helm validation passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Helm lint passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Helm template validation passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Helm packages generated" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Helm repository index updated" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Changes committed and pushed" >> "$GITHUB_STEP_SUMMARY"
