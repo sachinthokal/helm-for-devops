@@ -265,7 +265,7 @@ jobs:
           fi
 
           git commit \
-            -m "chore: publish helm charts"
+            -m "chore(helm-ci): publish helm charts and update index [skip ci]"
 
           git push
           
